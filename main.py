@@ -1,9 +1,10 @@
 
 from contextlib import asynccontextmanager
-from fastapi import Body, FastAPI
+from fastapi import Body, FastAPI, status, HTTPException
+from fastapi.responses import RedirectResponse
 from database.db import engine
 from database.models import Base
-from service import generate_short_url
+from service import generate_short_url, get_url_by_slug
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -12,7 +13,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-    
+
 app = FastAPI(lifespan=lifespan)
 
 
@@ -23,6 +24,10 @@ async def generate_slug(
     new_slug = await generate_short_url(long_url)
     return {"data": new_slug}
 
-# @app.get("/{slug}")
-# async def redirect_to_url(slug: str):
-#     return ...
+@app.get("/{slug}")
+async def redirect_to_url(slug: str):
+    try:
+        long_url = await get_url_by_slug(slug)
+    except ValueError:
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slug not found")
+    return RedirectResponse(url=long_url, status_code=status.HTTP_302_FOUND)

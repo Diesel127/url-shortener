@@ -1,5 +1,6 @@
 from database.db import new_session
 from database.models import ShortURL
+from sqlalchemy import select
 
 async def add_slug_to_db(slug: str, long_url: str):
     async with new_session() as session:
@@ -7,3 +8,12 @@ async def add_slug_to_db(slug: str, long_url: str):
         session.add(new_slug)
         await session.commit()
     
+async def get_long_url_by_slug(slug: str) -> str | None:
+    async with new_session() as session:
+        query = select(ShortURL).filter_by(slug=slug)
+        await session.execute(query)
+        result = await session.execute(query)
+        res = result.scalar_one_or_none()
+        if res:
+            return res.long_url
+        return None
